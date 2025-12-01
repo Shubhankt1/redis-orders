@@ -10,4 +10,5 @@ export const validate =
         .status(400)
         .json({ success: false, errors: result.error.issues });
     }
+    next();
   };
