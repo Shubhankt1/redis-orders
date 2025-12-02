@@ -4,6 +4,9 @@ import { RestaurantSchema, type Restaurant } from "../schemas/restaurant.js";
 import { initRedisClient } from "../utils/client.js";
 import { nanoid } from "nanoid";
 import {
+  cuisineKey,
+  cuisinesKey,
+  restaurantCuisinesKeyById,
   restaurantKeyById,
   reviewDetailsKeyById,
   reviewKeyById,
@@ -24,8 +27,16 @@ router.post("/", validate(RestaurantSchema), async (req, res) => {
     name: data.name,
     location: data.location,
   };
-  const addResult = await client.hSet(restaurantKey, hashData);
-  console.log(`Added ${addResult} results`);
+  const addResult = await Promise.all([
+    ...data.cuisines.map((cuisine) =>
+      Promise.all([
+        client.sAdd(cuisinesKey, cuisine),
+        client.sAdd(cuisineKey(cuisine), id),
+        client.sAdd(restaurantCuisinesKeyById(id), cuisine),
+      ])
+    ),
+    client.hSet(restaurantKey, hashData),
+  ]);
   return successResp(res, hashData, "Added new Restaurant");
 });
 
@@ -107,11 +118,12 @@ router.get(
     const { restaurantId } = req.params;
     const client = await initRedisClient();
     const restaurantKey = restaurantKeyById(restaurantId);
-    const [viewCount, restaurant] = await Promise.all([
+    const [viewCount, restaurant, cuisines] = await Promise.all([
       client.hIncrBy(restaurantKey, "viewCount", 1),
       client.hGetAll(restaurantKey),
+      client.sMembers(restaurantCuisinesKeyById(restaurantId)),
     ]);
-    return successResp(res, restaurant);
+    return successResp(res, { ...restaurant, cuisines });
   }
 );
 
