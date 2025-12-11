@@ -65,6 +65,38 @@ router.post("/", validate(RestaurantSchema), async (req, res) => {
   return successResp(res, hashData, "Added new Restaurant");
 });
 
+router.get(
+  "/:restaurantId/weather",
+  async (req: Request<{ restaurantId: string }>, res, next) => {
+    const { restaurantId } = req.params;
+    const { units = "metric" } = req.query;
+    console.log(units);
+    const client = await initRedisClient();
+
+    const restaurantKey = restaurantKeyById(restaurantId);
+    const loc = await client.hGet(restaurantKey, "location");
+    if (!loc)
+      return errorResp(res, 404, "Location not found for this restaurant!");
+
+    // Get Weather
+    console.log("Cache Miss!");
+    const weatherApiKey = process.env.OPEN_WEATHER_API_KEY;
+    const weatherResponse = await fetch(
+      `https://api.openweathermap.org/data/2.5/weather?q=${loc}&appid=${weatherApiKey}&units=${units}`
+    );
+    if (weatherResponse.status === 200) {
+      const weatherData = await weatherResponse.json();
+      return successResp(res, weatherData);
+    }
+
+    return errorResp(
+      res,
+      weatherResponse.status,
+      "Error fetching weather data!"
+    );
+  }
+);
+
 router.post(
   "/:restaurantId/reviews",
   checkRestaurantExists,
