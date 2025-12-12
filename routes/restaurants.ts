@@ -11,6 +11,7 @@ import { nanoid } from "nanoid";
 import {
   cuisineKey,
   cuisinesKey,
+  indexKey,
   restaurantCuisinesKeyById,
   restaurantDetailsKeyById,
   restaurantKeyById,
@@ -70,6 +71,15 @@ router.post("/", validate(RestaurantSchema), async (req, res) => {
     }),
   ]);
   return successResp(res, hashData, "Added new Restaurant");
+});
+
+router.get("/search", async (req, res, next) => {
+  const { q } = req.query;
+
+  const client = await initRedisClient();
+  const results = await client.ft.search(indexKey, `@name:${q}`);
+
+  return successResp(res, results);
 });
 
 router.get(
