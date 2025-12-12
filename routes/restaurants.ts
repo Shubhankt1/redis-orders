@@ -9,6 +9,7 @@ import {
 import { initRedisClient } from "../utils/client.js";
 import { nanoid } from "nanoid";
 import {
+  bloomKey,
   cuisineKey,
   cuisinesKey,
   indexKey,
@@ -51,6 +52,11 @@ router.post("/", validate(RestaurantSchema), async (req, res) => {
   const client = await initRedisClient();
   const id = nanoid();
   const restaurantKey = restaurantKeyById(id);
+  const bloomString = `${data.name}:${data.location}`; // what we store in bloom filters to check for existance
+  const exists = await client.bf.exists(bloomKey, bloomString);
+
+  if (exists) return errorResp(res, 409, "Restaurant Already Exists!");
+
   const hashData = {
     id,
     name: data.name,
@@ -69,6 +75,7 @@ router.post("/", validate(RestaurantSchema), async (req, res) => {
       score: 0,
       value: id,
     }),
+    client.bf.add(bloomKey, bloomString),
   ]);
   return successResp(res, hashData, "Added new Restaurant");
 });
@@ -227,6 +234,7 @@ router.delete(
     const client = await initRedisClient();
     const reviewKey = reviewKeyById(restaurantId);
     const reviewDetailsKey = reviewDetailsKeyById(reviewId);
+    // TODO: Take care of stars and avg rating as well.
     const [removeResult, deleteResult] = await Promise.all([
       client.lRem(reviewKey, 0, reviewId),
       client.del(reviewDetailsKey),
