@@ -1,12 +1,18 @@
 import express, { type Request } from "express";
 import { validate } from "../middlewares/validate.js";
-import { RestaurantSchema, type Restaurant } from "../schemas/restaurant.js";
+import {
+  RestaurantDetailsSchema,
+  RestaurantSchema,
+  type Restaurant,
+  type RestaurantDetails,
+} from "../schemas/restaurant.js";
 import { initRedisClient } from "../utils/client.js";
 import { nanoid } from "nanoid";
 import {
   cuisineKey,
   cuisinesKey,
   restaurantCuisinesKeyById,
+  restaurantDetailsKeyById,
   restaurantKeyById,
   restaurantsByRatingKey,
   reviewDetailsKeyById,
@@ -106,6 +112,38 @@ router.get(
       weatherResponse.status,
       "Error fetching weather data!"
     );
+  }
+);
+
+router.post(
+  "/:restaurantId/details",
+  checkRestaurantExists,
+  validate(RestaurantDetailsSchema),
+  async (req: Request<{ restaurantId: string }>, res, next) => {
+    const { restaurantId } = req.params;
+    const data = req.body as RestaurantDetails;
+
+    const client = await initRedisClient();
+
+    const restaurantDetailsKey = restaurantDetailsKeyById(restaurantId);
+    await client.json.set(restaurantDetailsKey, ".", data);
+    return successResp(res, {}, "Restaurant Details added successfully!");
+  }
+);
+
+router.get(
+  "/:restaurantId/details",
+  checkRestaurantExists,
+  validate(RestaurantDetailsSchema),
+  async (req: Request<{ restaurantId: string }>, res, next) => {
+    const { restaurantId } = req.params;
+    const data = req.body as RestaurantDetails;
+
+    const client = await initRedisClient();
+
+    const restaurantDetailsKey = restaurantDetailsKeyById(restaurantId);
+    const restDetails = await client.json.get(restaurantDetailsKey);
+    return successResp(res, restDetails);
   }
 );
 
