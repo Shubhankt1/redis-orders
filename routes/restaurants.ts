@@ -11,6 +11,7 @@ import {
   restaurantsByRatingKey,
   reviewDetailsKeyById,
   reviewKeyById,
+  weatherKeyById,
 } from "../utils/keys.js";
 import { errorResp, successResp } from "../utils/responses.js";
 import { checkRestaurantExists } from "../middlewares/checkRestaurantId.js";
@@ -67,16 +68,24 @@ router.post("/", validate(RestaurantSchema), async (req, res) => {
 
 router.get(
   "/:restaurantId/weather",
+  checkRestaurantExists,
   async (req: Request<{ restaurantId: string }>, res, next) => {
     const { restaurantId } = req.params;
     const { units = "metric" } = req.query;
-    console.log(units);
     const client = await initRedisClient();
 
+    const weatherKey = weatherKeyById(restaurantId);
     const restaurantKey = restaurantKeyById(restaurantId);
+
     const loc = await client.hGet(restaurantKey, "location");
     if (!loc)
       return errorResp(res, 404, "Location not found for this restaurant!");
+
+    const weatherCache = await client.get(weatherKey);
+    if (weatherCache) {
+      console.log("Cache Hit!");
+      return successResp(res, JSON.parse(weatherCache));
+    }
 
     // Get Weather
     console.log("Cache Miss!");
@@ -86,6 +95,9 @@ router.get(
     );
     if (weatherResponse.status === 200) {
       const weatherData = await weatherResponse.json();
+      client.set(weatherKey, JSON.stringify(weatherData), {
+        EX: 60 * 60,
+      });
       return successResp(res, weatherData);
     }
 
