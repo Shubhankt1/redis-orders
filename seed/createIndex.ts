@@ -8,7 +8,10 @@ async function createIndex() {
   try {
     // try deleting
     await client.ft.dropIndex(indexKey);
-  } catch (err) {
+  } catch (err: any) {
+    if (!err.message?.includes("Unknown index name")) {
+      throw err; // rethrow unexpected errors
+    }
     console.log("No existing index found. Creating a new one...");
   }
 
@@ -35,6 +38,7 @@ async function createIndex() {
     }
   );
   console.log("Index Created Successfully!");
+  await client.quit();
 }
 
 await createIndex();
