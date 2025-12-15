@@ -187,6 +187,7 @@ router.post(
       client.hSet(reviewDetailsKey, reviewData),
       client.hIncrByFloat(restaurantKey, "totalStars", data.rating),
     ]);
+    // console.log({ reviewCount, setResult, totalStars });
     const averageRating = Number((totalStars / reviewCount).toFixed(1));
     await Promise.all([
       client.zAdd(restaurantsByRatingKey, {
@@ -218,7 +219,7 @@ router.get(
       reviewIds.map((id) => client.hGetAll(reviewDetailsKeyById(id)))
     );
 
-    return successResp(res, reviews);
+    return successResp(res, { count: reviews.length, reviews: reviews });
   }
 );
 
@@ -232,15 +233,39 @@ router.delete(
   ) => {
     const { restaurantId, reviewId } = req.params;
     const client = await initRedisClient();
+
+    const restaurantKey = restaurantKeyById(restaurantId);
     const reviewKey = reviewKeyById(restaurantId);
     const reviewDetailsKey = reviewDetailsKeyById(reviewId);
+
+    const reviewDetails = await client.hGetAll(reviewDetailsKey);
+
     // TODO: Take care of stars and avg rating as well.
-    const [removeResult, deleteResult] = await Promise.all([
+    const [removeResult, deleteResult, totalStars] = await Promise.all([
       client.lRem(reviewKey, 0, reviewId),
       client.del(reviewDetailsKey),
+      client.hIncrByFloat(
+        restaurantKey,
+        "totalStars",
+        Number(reviewDetails.rating) * -1
+      ),
     ]);
+
+    console.log({ removeResult, deleteResult, totalStars });
     if (removeResult === 0 && deleteResult === 0)
       return errorResp(res, 404, "Review Not Found!");
+
+    const reviewCount = await client.lLen(reviewKey);
+    const averageRating = Number((totalStars / reviewCount).toFixed(1));
+    console.log({ reviewCount, averageRating });
+
+    await Promise.all([
+      client.zAdd(restaurantsByRatingKey, {
+        score: averageRating,
+        value: restaurantId,
+      }),
+      client.hSet(restaurantKey, "avgStars", averageRating),
+    ]);
 
     return successResp(res, reviewId, "Review Deleted!");
   }

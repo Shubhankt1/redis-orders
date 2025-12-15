@@ -9,7 +9,7 @@ async function createIndex() {
     // try deleting
     await client.ft.dropIndex(indexKey);
   } catch (err: any) {
-    if (!err.message?.includes("Unknown index name")) {
+    if (!err.message?.includes("Unknown Index name")) {
       throw err; // rethrow unexpected errors
     }
     console.log("No existing index found. Creating a new one...");

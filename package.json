@@ -12,7 +12,7 @@
     "start": "node --env-file .env dist/index.js",
     "db:index": "tsx seed/createIndex.ts",
     "db:bloom": "tsx seed/createBloomFilter.ts",
-    "db:setup": "pnpm dlx db:index && pnpm dlx db:bloom"
+    "db:setup": "pnpm db:index && pnpm db:bloom"
   },
   "dependencies": {
     "express": "^5.1.0",
