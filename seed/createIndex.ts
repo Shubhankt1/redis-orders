@@ -1,4 +1,4 @@
-import { SCHEMA_FIELD_TYPE, type SchemaFieldType } from "redis";
+import { SCHEMA_FIELD_TYPE } from "redis";
 import { initRedisClient } from "../utils/client.js";
 import { indexKey, getKeyName } from "../utils/keys.js";
 

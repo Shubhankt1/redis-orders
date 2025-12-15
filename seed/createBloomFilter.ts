@@ -1,7 +1,7 @@
 import { initRedisClient } from "../utils/client.js";
 import { bloomKey } from "../utils/keys.js";
 
-async function createBlookFilter() {
+async function createBloomFilter() {
   const client = await initRedisClient();
   await Promise.all([
     client.del(bloomKey),
@@ -9,5 +9,5 @@ async function createBlookFilter() {
   ]);
 }
 
-await createBlookFilter();
+await createBloomFilter();
 process.exit();
