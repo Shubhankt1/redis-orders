@@ -188,7 +188,7 @@ router.post(
       client.hIncrByFloat(restaurantKey, "totalStars", data.rating),
     ]);
     // console.log({ reviewCount, setResult, totalStars });
-    const averageRating = Number((totalStars / reviewCount).toFixed(1));
+    const averageRating = Number((Number(totalStars) / reviewCount).toFixed(1));
     await Promise.all([
       client.zAdd(restaurantsByRatingKey, {
         score: averageRating,
@@ -238,6 +238,12 @@ router.delete(
     const reviewKey = reviewKeyById(restaurantId);
     const reviewDetailsKey = reviewDetailsKeyById(reviewId);
 
+    const reviewIds = await client.lRange(reviewKey, 0, -1);
+    console.log({ reviewIds });
+
+    if (!reviewIds.includes(reviewId))
+      return errorResp(res, 404, "Review Not Found!");
+
     const reviewDetails = await client.hGetAll(reviewDetailsKey);
 
     // TODO: Take care of stars and avg rating as well.
@@ -256,7 +262,10 @@ router.delete(
       return errorResp(res, 404, "Review Not Found!");
 
     const reviewCount = await client.lLen(reviewKey);
-    const averageRating = Number((totalStars / reviewCount).toFixed(1));
+    const averageRating =
+      reviewCount === 0
+        ? 0
+        : Number((Number(totalStars) / reviewCount).toFixed(1));
     console.log({ reviewCount, averageRating });
 
     await Promise.all([
