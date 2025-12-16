@@ -39,6 +39,16 @@ Supported environment variables:
 
 3. Prepare Redis modules / seeds
 
+If you don't have a Redis server with RediSearch and RedisBloom, you can run Redis Stack (includes both modules) with Docker.
+
+Run with a single container:
+
+```bash
+docker run -d --name redis-stack -p 6379:6379 -p 8001:8001 redis/redis-stack:latest
+```
+
+After the container is running, the app can connect to `redis://localhost:6379` (or set `REDIS_URL` in your `.env`).
+
 Create the RediSearch index and Bloom filter used by the app. These seed scripts are TypeScript files under `seed/`.
 
 Run with `tsx` (installed as a dev dependency):
@@ -48,7 +58,7 @@ npx tsx seed/createBloomFilter.ts
 npx tsx seed/createIndex.ts
 ```
 
-These commands will reserve a Bloom filter and create the RediSearch index for restaurant hashes.
+These commands will reserve a Bloom filter and create the RediSearch index for restaurant hashes. Make sure the Redis container is running before you execute them.
 
 ## Run
 
